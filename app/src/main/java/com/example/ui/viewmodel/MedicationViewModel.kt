@@ -122,21 +122,30 @@ class MedicationViewModel(
     fun markDoseTaken(log: IntakeLog, context: Context? = null) {
         viewModelScope.launch {
             repository.markDoseTaken(log)
-            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
+            context?.let {
+                com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it)
+                com.example.worker.MedicationWorkScheduler.scheduleAllReminders(it)
+            }
         }
     }
 
     fun markDoseSkipped(log: IntakeLog, context: Context? = null) {
         viewModelScope.launch {
             repository.markDoseSkipped(log)
-            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
+            context?.let {
+                com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it)
+                com.example.worker.MedicationWorkScheduler.scheduleAllReminders(it)
+            }
         }
     }
 
     fun snoozeDose(log: IntakeLog, minutes: Int = 60, context: Context? = null) {
         viewModelScope.launch {
             repository.snoozeDose(log, minutes)
-            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
+            context?.let {
+                com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it)
+                com.example.worker.MedicationWorkScheduler.scheduleAllReminders(it)
+            }
         }
     }
 
@@ -197,7 +206,10 @@ class MedicationViewModel(
                 repository.updateMedication(medication)
             }
             closeAddMedicationDialog()
-            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
+            context?.let {
+                com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it)
+                com.example.worker.MedicationWorkScheduler.scheduleAllReminders(it)
+            }
         }
     }
 

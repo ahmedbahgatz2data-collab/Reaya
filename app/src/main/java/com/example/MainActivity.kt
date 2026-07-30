@@ -55,10 +55,18 @@ import com.example.ui.theme.MedReminderTheme
 import com.example.ui.viewmodel.MedicationViewModel
 import com.example.ui.viewmodel.MedicationViewModelFactory
 
+import com.example.widget.NextDoseWidgetProvider
+import com.example.worker.MedicationWorkScheduler
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Schedule WorkManager background reminders & update widgets
+        MedicationWorkScheduler.scheduleAllReminders(applicationContext)
+        NextDoseWidgetProvider.updateAllWidgets(applicationContext)
+
         setContent {
             val context = LocalContext.current
             val database = remember { AppDatabase.getDatabase(context) }
