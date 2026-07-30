@@ -70,6 +70,10 @@ import com.example.ui.theme.BentoBorder
 import com.example.ui.theme.BentoPrimary
 import com.example.ui.theme.BentoPrimaryContainer
 
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.CalendarToday
+import com.example.ui.components.BarcodeScannerDialog
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditMedicationDialog(
@@ -85,7 +89,10 @@ fun AddEditMedicationDialog(
     var stockCountText by remember { mutableStateOf((medication?.stockCount ?: 30).toString()) }
     var lowStockThresholdText by remember { mutableStateOf((medication?.lowStockThreshold ?: 5).toString()) }
     var notes by remember { mutableStateOf(medication?.notes ?: "") }
+    var barcode by remember { mutableStateOf(medication?.barcode ?: "") }
+    var expiryDate by remember { mutableStateOf(medication?.expiryDate ?: "") }
     var selectedColor by remember { mutableStateOf(medication?.colorHex ?: "#00897B") }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var voiceNotePath by remember { mutableStateOf(medication?.voiceNotePath) }
     var isRecording by remember { mutableStateOf(false) }
@@ -175,6 +182,48 @@ fun AddEditMedicationDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Barcode Quick Scan Button
+                Button(
+                    onClick = { showBarcodeScanner = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = BentoPrimaryContainer),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("open_barcode_scanner_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCodeScanner,
+                        contentDescription = null,
+                        tint = BentoPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "مسح باركود علبة الدواء بالكامل (الكاميرا 📷)",
+                        color = BentoPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+
+                if (showBarcodeScanner) {
+                    BarcodeScannerDialog(
+                        onDismiss = { showBarcodeScanner = false },
+                        onBarcodeScanned = { result ->
+                            name = result.name
+                            dosage = result.dosage
+                            form = result.form
+                            foodInstruction = result.foodInstruction
+                            barcode = result.barcode
+                            expiryDate = result.expiryDate
+                            stockCountText = result.stockCount.toString()
+                            showBarcodeScanner = false
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 // Medication Name
                 OutlinedTextField(
                     value = name,
@@ -186,6 +235,35 @@ fun AddEditMedicationDialog(
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Barcode & Expiry Date Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = barcode,
+                        onValueChange = { barcode = it },
+                        label = { Text("الرمز الشريطي (Barcode)") },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("med_barcode_input"),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = expiryDate,
+                        onValueChange = { expiryDate = it },
+                        label = { Text("تاريخ الانتهاء (YYYY-MM-DD)") },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("med_expiry_input"),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -613,6 +691,8 @@ fun AddEditMedicationDialog(
                                         colorHex = selectedColor,
                                         notes = notes.trim(),
                                         voiceNotePath = voiceNotePath,
+                                        barcode = barcode.trim().ifEmpty { null },
+                                        expiryDate = expiryDate.trim().ifEmpty { null },
                                         isActive = true
                                     )
                                     onSave(updatedMed)

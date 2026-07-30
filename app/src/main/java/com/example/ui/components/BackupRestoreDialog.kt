@@ -62,16 +62,26 @@ import com.example.ui.theme.BentoPrimaryContainer
 import com.example.ui.theme.BentoSecondaryContainer
 import com.example.ui.viewmodel.MedicationViewModel
 
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Cloud
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @Composable
 fun BackupRestoreDialog(
     viewModel: MedicationViewModel,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Export, 1 = Import
+    var selectedTab by remember { mutableIntStateOf(2) } // 0 = Export, 1 = Import, 2 = Firestore Cloud
     var exportedJsonText by remember { mutableStateOf("") }
     var importJsonInput by remember { mutableStateOf("") }
-    var statusMsg by remember { mutableStateOf<String?>(null) }
+    var localStatusMsg by remember { mutableStateOf<String?>(null) }
+    val backupStatusMessage by viewModel.backupStatusMessage.collectAsStateWithLifecycle()
+    val syncUserId by viewModel.syncUserIdState.collectAsStateWithLifecycle()
+    val isCloudSyncing by viewModel.isCloudSyncing.collectAsStateWithLifecycle()
+    var customCloudCodeInput by remember(syncUserId) { mutableStateOf(syncUserId) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -128,7 +138,7 @@ fun BackupRestoreDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Tabs: Export vs Import
+                // Tabs: Cloud Firestore vs Local Export vs Local Import
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = BentoSecondaryContainer.copy(alpha = 0.4f),
@@ -138,13 +148,25 @@ fun BackupRestoreDialog(
                         .background(BentoSecondaryContainer.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 ) {
                     Tab(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("المزامنة السحابية ☁️", fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        modifier = Modifier.testTag("tab_cloud_sync")
+                    )
+                    Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(imageVector = Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("تصدير النسخة", fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("تصدير محلي", fontWeight = FontWeight.Bold)
                             }
                         },
                         modifier = Modifier.testTag("tab_export_backup")
@@ -155,8 +177,8 @@ fun BackupRestoreDialog(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(imageVector = Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("استعادة النسخة", fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("استعادة محلية", fontWeight = FontWeight.Bold)
                             }
                         },
                         modifier = Modifier.testTag("tab_import_backup")
@@ -165,7 +187,102 @@ fun BackupRestoreDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (selectedTab == 0) {
+                if (selectedTab == 2) {
+                    // FIRESTORE CLOUD SYNC & RESTORE CONTENT
+                    Text(
+                        text = "مزامنة سحابية تلقائية لجدول الدواء والمخزون عبر Firebase Firestore بين أجهزتك المختلفة، مع إمكانية استرجاع البيانات عند تغيير جهازك.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, BentoBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = BentoPrimaryContainer.copy(alpha = 0.25f))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "معرف السحابة الخاص بجهازك (Sync Code):",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = BentoPrimary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = customCloudCodeInput,
+                                    onValueChange = { customCloudCodeInput = it },
+                                    label = { Text("معرّف المزامنة السحابية") },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("sync_cloud_id_input"),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                IconButton(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        val clip = ClipData.newPlainText("SyncCode", customCloudCodeInput)
+                                        clipboard.setPrimaryClip(clip)
+                                        Toast.makeText(context, "تم نسخ رمز المزامنة للحافظة!", Toast.LENGTH_SHORT).show()
+                                    }
+                                ) {
+                                    Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "نسخ الرمز", tint = BentoPrimary)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                viewModel.setCustomSyncUserId(context, customCloudCodeInput)
+                                viewModel.syncDataToCloud(context)
+                            },
+                            enabled = !isCloudSyncing,
+                            colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("upload_to_firestore_btn")
+                        ) {
+                            Icon(imageVector = Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isCloudSyncing) "جاري المزامنة..." else "مزامنة ورفع ☁️", fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.setCustomSyncUserId(context, customCloudCodeInput)
+                                viewModel.restoreDataFromCloud(context, customCloudCodeInput)
+                            },
+                            enabled = !isCloudSyncing,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("restore_from_firestore_btn")
+                        ) {
+                            Icon(imageVector = Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("استعادة الهاتف 📱", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else if (selectedTab == 0) {
                     // EXPORT CONTENT
                     Text(
                         text = "قم بتصدير نسخ احتياطية من جميع الأدوية والمواعيد بتنسيق JSON آمن ومحلي.",
@@ -180,7 +297,7 @@ fun BackupRestoreDialog(
                             onClick = {
                                 viewModel.exportBackupData { json ->
                                     exportedJsonText = json
-                                    statusMsg = "تم إنشاء النسخة الاحتياطية بنجاح!"
+                                    localStatusMsg = "تم إنشاء النسخة الاحتياطية بنجاح!"
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
@@ -307,11 +424,11 @@ fun BackupRestoreDialog(
                         Button(
                             onClick = {
                                 if (importJsonInput.isBlank()) {
-                                    statusMsg = "يرجى إدخال نص النسخة الاحتياطية أولاً."
+                                    localStatusMsg = "يرجى إدخال نص النسخة الاحتياطية أولاً."
                                 } else {
                                     viewModel.importBackupData(importJsonInput) { success ->
                                         if (success) {
-                                            statusMsg = "تمت الاستعادة بنجاح!"
+                                            localStatusMsg = "تمت الاستعادة بنجاح!"
                                         }
                                     }
                                 }
@@ -329,7 +446,8 @@ fun BackupRestoreDialog(
                     }
                 }
 
-                if (statusMsg != null) {
+                val currentStatus = localStatusMsg ?: backupStatusMessage
+                if (currentStatus != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Card(
                         colors = CardDefaults.cardColors(containerColor = BentoPrimaryContainer.copy(alpha = 0.5f)),
@@ -337,7 +455,7 @@ fun BackupRestoreDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = statusMsg!!,
+                            text = currentStatus,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimary,

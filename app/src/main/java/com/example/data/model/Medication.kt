@@ -17,6 +17,8 @@ data class Medication(
     val colorHex: String = "#00897B",
     val notes: String = "",
     val voiceNotePath: String? = null,
+    val barcode: String? = null,
+    val expiryDate: String? = null,
     val isActive: Boolean = true,
     val createdTimestamp: Long = System.currentTimeMillis()
 )

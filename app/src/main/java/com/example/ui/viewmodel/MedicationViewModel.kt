@@ -20,12 +20,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import com.example.util.FirestoreSyncManager
+
 class MedicationViewModel(
     private val repository: MedicationRepository
 ) : ViewModel() {
 
     private val geminiAdvisor = GeminiAudioAdvisor()
     private var ttsHelper: TextToSpeechHelper? = null
+    private var syncManager: FirestoreSyncManager? = null
+
+    private val _syncUserIdState = MutableStateFlow("")
+    val syncUserIdState: StateFlow<String> = _syncUserIdState.asStateFlow()
+
+    private val _isCloudSyncing = MutableStateFlow(false)
+    val isCloudSyncing: StateFlow<Boolean> = _isCloudSyncing.asStateFlow()
 
     private val _selectedDate = MutableStateFlow(
         SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -266,6 +275,54 @@ class MedicationViewModel(
                 _backupStatusMessage.value = "عذراً، فشلت استعادة البيانات. يرجى التأكد من تنسيق الملف."
                 onComplete(false)
             }
+        }
+    }
+
+    fun getSyncManager(context: Context): FirestoreSyncManager {
+        if (syncManager == null) {
+            syncManager = FirestoreSyncManager(context)
+            _syncUserIdState.value = syncManager!!.syncUserId
+        }
+        return syncManager!!
+    }
+
+    fun syncDataToCloud(context: Context) {
+        viewModelScope.launch {
+            _isCloudSyncing.value = true
+            val manager = getSyncManager(context)
+            val meds = allMedications.value
+            val logs = allLogsHistory.value
+
+            val (success, message) = manager.uploadFullBackup(meds, logs)
+            _backupStatusMessage.value = message
+            _isCloudSyncing.value = false
+        }
+    }
+
+    fun restoreDataFromCloud(context: Context, targetUserId: String? = null) {
+        viewModelScope.launch {
+            _isCloudSyncing.value = true
+            val manager = getSyncManager(context)
+            val codeToUse = if (!targetUserId.isNullOrBlank()) targetUserId.trim() else manager.syncUserId
+
+            val (success, fetchedMeds, fetchedLogs) = manager.restoreFromCloud(codeToUse)
+            if (success && !fetchedMeds.isNullOrEmpty()) {
+                fetchedMeds.forEach { med -> repository.addMedication(med) }
+                _backupStatusMessage.value = "تمت استعادة ${fetchedMeds.size} دواء بنجاح من Firestore السحابي (كود: $codeToUse)!"
+            } else if (success) {
+                _backupStatusMessage.value = "لم يتم العثور على أدوية مخزنة بهذا المعرف السحابي ($codeToUse)."
+            } else {
+                _backupStatusMessage.value = "عذراً، تعذر الاتصال بـ Firestore السحابي."
+            }
+            _isCloudSyncing.value = false
+        }
+    }
+
+    fun setCustomSyncUserId(context: Context, newId: String) {
+        if (newId.isNotBlank()) {
+            val manager = getSyncManager(context)
+            manager.syncUserId = newId.trim()
+            _syncUserIdState.value = newId.trim()
         }
     }
 
