@@ -66,6 +66,18 @@ class MedicationViewModel(
     private val _voiceStyle = MutableStateFlow("FRIENDLY")
     val voiceStyle: StateFlow<String> = _voiceStyle.asStateFlow()
 
+    private val _userName = MutableStateFlow("أحمد")
+    val userName: StateFlow<String> = _userName.asStateFlow()
+
+    private val _userEmail = MutableStateFlow("ahmed@example.com")
+    val userEmail: StateFlow<String> = _userEmail.asStateFlow()
+
+    private val _isBackgroundWorkEnabled = MutableStateFlow(true)
+    val isBackgroundWorkEnabled: StateFlow<Boolean> = _isBackgroundWorkEnabled.asStateFlow()
+
+    private val _highVibrationEnabled = MutableStateFlow(true)
+    val highVibrationEnabled: StateFlow<Boolean> = _highVibrationEnabled.asStateFlow()
+
     private val _isDarkMode = MutableStateFlow(false)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
@@ -342,6 +354,24 @@ class MedicationViewModel(
             manager.syncUserId = newId.trim()
             _syncUserIdState.value = newId.trim()
         }
+    }
+
+    fun updateUserProfile(name: String, email: String) {
+        if (name.isNotBlank()) _userName.value = name.trim()
+        if (email.isNotBlank()) _userEmail.value = email.trim()
+    }
+
+    fun toggleBackgroundWork(enabled: Boolean, context: Context) {
+        _isBackgroundWorkEnabled.value = enabled
+        if (enabled) {
+            com.example.worker.MedicationWorkScheduler.scheduleAllReminders(context)
+        } else {
+            androidx.work.WorkManager.getInstance(context).cancelAllWork()
+        }
+    }
+
+    fun toggleHighVibration(enabled: Boolean) {
+        _highVibrationEnabled.value = enabled
     }
 
     fun clearMedicationTips() {

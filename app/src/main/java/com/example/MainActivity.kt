@@ -91,7 +91,7 @@ enum class ScreenTab(val title: String, val icon: ImageVector, val tag: String) 
     HOME("الرئيسية", Icons.Default.Home, "tab_home"),
     CABINET("الجدول والخزانة", Icons.Default.CalendarMonth, "tab_cabinet"),
     HISTORY("السجل", Icons.Default.History, "tab_history"),
-    VOICE_SETTINGS("التنبيه الصوتي", Icons.Default.RecordVoiceOver, "tab_voice")
+    VOICE_SETTINGS("الإعدادات والحساب", Icons.Default.Settings, "tab_settings")
 }
 
 @Composable
