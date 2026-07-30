@@ -13,6 +13,9 @@ interface IntakeLogDao {
     @Query("SELECT * FROM intake_logs WHERE scheduledDate = :date ORDER BY scheduledTime ASC")
     fun getLogsForDate(date: String): Flow<List<IntakeLog>>
 
+    @Query("SELECT * FROM intake_logs WHERE scheduledDate = :date ORDER BY scheduledTime ASC")
+    suspend fun getLogsForDateDirect(date: String): List<IntakeLog>
+
     @Query("SELECT * FROM intake_logs ORDER BY scheduledDate DESC, scheduledTime DESC")
     fun getAllLogs(): Flow<List<IntakeLog>>
 

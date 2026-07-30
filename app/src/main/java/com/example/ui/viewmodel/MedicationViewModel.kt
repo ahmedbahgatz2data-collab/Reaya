@@ -119,21 +119,24 @@ class MedicationViewModel(
         }
     }
 
-    fun markDoseTaken(log: IntakeLog) {
+    fun markDoseTaken(log: IntakeLog, context: Context? = null) {
         viewModelScope.launch {
             repository.markDoseTaken(log)
+            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
         }
     }
 
-    fun markDoseSkipped(log: IntakeLog) {
+    fun markDoseSkipped(log: IntakeLog, context: Context? = null) {
         viewModelScope.launch {
             repository.markDoseSkipped(log)
+            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
         }
     }
 
-    fun snoozeDose(log: IntakeLog, minutes: Int = 60) {
+    fun snoozeDose(log: IntakeLog, minutes: Int = 60, context: Context? = null) {
         viewModelScope.launch {
             repository.snoozeDose(log, minutes)
+            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
         }
     }
 
@@ -186,7 +189,7 @@ class MedicationViewModel(
         _editingMedication.value = null
     }
 
-    fun saveMedication(medication: Medication) {
+    fun saveMedication(medication: Medication, context: Context? = null) {
         viewModelScope.launch {
             if (medication.id == 0L) {
                 repository.addMedication(medication)
@@ -194,18 +197,21 @@ class MedicationViewModel(
                 repository.updateMedication(medication)
             }
             closeAddMedicationDialog()
+            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
         }
     }
 
-    fun deleteMedication(medication: Medication) {
+    fun deleteMedication(medication: Medication, context: Context? = null) {
         viewModelScope.launch {
             repository.deleteMedication(medication)
+            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
         }
     }
 
-    fun refillStock(medicationId: Long, amount: Int) {
+    fun refillStock(medicationId: Long, amount: Int, context: Context? = null) {
         viewModelScope.launch {
             repository.refillStock(medicationId, amount)
+            context?.let { com.example.widget.NextDoseWidgetProvider.updateAllWidgets(it) }
         }
     }
 
