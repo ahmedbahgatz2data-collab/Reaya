@@ -21,7 +21,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.LocalPharmacy
+import androidx.compose.material.icons.filled.FolderZip
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.platform.LocalContext
+import com.example.util.ScheduleShareHelper
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -60,7 +64,18 @@ import com.example.ui.viewmodel.MedicationViewModel
 fun CabinetScreen(
     viewModel: MedicationViewModel
 ) {
+    val context = LocalContext.current
     val medications by viewModel.allMedications.collectAsStateWithLifecycle()
+    val todayLogs by viewModel.todayLogs.collectAsStateWithLifecycle()
+    val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
+    val showBackupDialog by viewModel.showBackupDialog.collectAsStateWithLifecycle()
+
+    if (showBackupDialog) {
+        com.example.ui.components.BackupRestoreDialog(
+            viewModel = viewModel,
+            onDismiss = { viewModel.closeBackupDialog() }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -89,23 +104,103 @@ fun CabinetScreen(
                     )
                 }
 
-                Surface(
-                    shape = CircleShape,
-                    color = BentoPrimaryContainer,
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocalPharmacy,
-                        contentDescription = null,
-                        tint = BentoPrimary,
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .size(24.dp)
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        shape = CircleShape,
+                        color = BentoPrimaryContainer,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        IconButton(onClick = {
+                            ScheduleShareHelper.shareSchedule(context, medications, todayLogs, selectedDate)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "مشاركة الجدول",
+                                tint = BentoPrimary
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = CircleShape,
+                        color = BentoPrimaryContainer,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        IconButton(onClick = { viewModel.openBackupDialog() }) {
+                            Icon(
+                                imageVector = Icons.Default.FolderZip,
+                                contentDescription = "النسخ الاحتياطي والاستعادة",
+                                tint = BentoPrimary
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Backup & Restore Action Banner Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, BentoBorder, RoundedCornerShape(20.dp))
+                    .testTag("backup_restore_banner_card"),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = BentoPrimaryContainer.copy(alpha = 0.35f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = BentoPrimary,
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FolderZip,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "النسخ الاحتياطي والاستعادة المحتفظ بها",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "تصدير أو استرجاع بيانات الخزانة بتنسيق JSON محلي",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = { viewModel.openBackupDialog() },
+                        colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.testTag("open_backup_dialog_button")
+                    ) {
+                        Text("نسخ / استعادة", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             if (medications.isEmpty()) {
                 Box(
@@ -253,6 +348,32 @@ fun BentoMedicationCard(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }
+
+                if (medication.voiceNotePath != null) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = BentoPrimary.copy(alpha = 0.15f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = null,
+                                tint = BentoPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "ملاحظة صوتية",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = BentoPrimary
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -275,6 +396,10 @@ fun BentoMedicationCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Stock Count Bar & Actions
+            val timesCount = medication.timesOfDay.split(",").map { it.trim() }.filter { it.isNotEmpty() }.size
+            val dailyDoses = if (timesCount > 0) timesCount else 1
+            val daysLeft = if (dailyDoses > 0) medication.stockCount / dailyDoses else medication.stockCount
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -295,7 +420,7 @@ fun BentoMedicationCard(
                         Spacer(modifier = Modifier.width(6.dp))
                     }
                     Text(
-                        text = "المخزون المتبقي: ${medication.stockCount} وحدة",
+                        text = "المخزون: ${medication.stockCount} (تكفي ~$daysLeft أيام)",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isLowStock) LowStockRed else MaterialTheme.colorScheme.onSurface

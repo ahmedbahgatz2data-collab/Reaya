@@ -16,6 +16,7 @@ data class Medication(
     val lowStockThreshold: Int = 5,
     val colorHex: String = "#00897B",
     val notes: String = "",
+    val voiceNotePath: String? = null,
     val isActive: Boolean = true,
     val createdTimestamp: Long = System.currentTimeMillis()
 )

@@ -23,8 +23,16 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.ui.platform.LocalContext
+import com.example.audio.AudioRecorderHelper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -58,7 +66,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.model.Medication
+import com.example.ui.theme.BentoBorder
 import com.example.ui.theme.BentoPrimary
+import com.example.ui.theme.BentoPrimaryContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +86,11 @@ fun AddEditMedicationDialog(
     var lowStockThresholdText by remember { mutableStateOf((medication?.lowStockThreshold ?: 5).toString()) }
     var notes by remember { mutableStateOf(medication?.notes ?: "") }
     var selectedColor by remember { mutableStateOf(medication?.colorHex ?: "#00897B") }
+    val context = LocalContext.current
+    var voiceNotePath by remember { mutableStateOf(medication?.voiceNotePath) }
+    var isRecording by remember { mutableStateOf(false) }
+    var isPlayingAudio by remember { mutableStateOf(false) }
+    val audioRecorder = remember { AudioRecorderHelper(context) }
 
     val timesList = remember {
         val initialTimes = medication?.timesOfDay?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
@@ -380,6 +395,164 @@ fun AddEditMedicationDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Voice Note Recording Section
+                Text(
+                    text = "الملاحظة الصوتية الخاصة بالدواء (التنبيه الصوتي):",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "سجّل صوتك لتنبيهك عند وقت الجرعة بدل الصوت الآلي",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, BentoBorder, RoundedCornerShape(16.dp))
+                        .testTag("med_voice_note_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = BentoPrimaryContainer.copy(alpha = 0.25f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = BentoPrimary,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Mic,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.padding(6.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = if (voiceNotePath != null && java.io.File(voiceNotePath!!).exists()) "يوجد تسجيل صوتي مخصص" else "لا يوجد تسجيل صوتي مخصص",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
+                            if (voiceNotePath != null && java.io.File(voiceNotePath!!).exists()) {
+                                IconButton(
+                                    onClick = {
+                                        audioRecorder.stopPlayback()
+                                        audioRecorder.stopRecording()
+                                        isPlayingAudio = false
+                                        isRecording = false
+                                        try {
+                                            java.io.File(voiceNotePath!!).delete()
+                                        } catch (_: Exception) {}
+                                        voiceNotePath = null
+                                    },
+                                    modifier = Modifier.testTag("delete_voice_note_button")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DeleteForever,
+                                        contentDescription = "حذف التسجيل الصوتي",
+                                        tint = Color.Red.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (isRecording) {
+                                Button(
+                                    onClick = {
+                                        val path = audioRecorder.stopRecording()
+                                        isRecording = false
+                                        if (path != null) {
+                                            voiceNotePath = path
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("stop_recording_button")
+                                ) {
+                                    Icon(imageVector = Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("إيقاف التسجيل", fontSize = 12.sp)
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        audioRecorder.stopPlayback()
+                                        isPlayingAudio = false
+                                        val newFile = java.io.File(context.filesDir, "med_voice_${System.currentTimeMillis()}.3gp")
+                                        val started = audioRecorder.startRecording(newFile)
+                                        if (started) {
+                                            isRecording = true
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("start_recording_button")
+                                ) {
+                                    Icon(imageVector = Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(if (voiceNotePath != null) "إعادة التسجيل" else "تسجيل بصوتك", fontSize = 12.sp)
+                                }
+                            }
+
+                            if (voiceNotePath != null && java.io.File(voiceNotePath!!).exists() && !isRecording) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (isPlayingAudio) {
+                                            audioRecorder.stopPlayback()
+                                            isPlayingAudio = false
+                                        } else {
+                                            val played = audioRecorder.playAudio(voiceNotePath!!) {
+                                                isPlayingAudio = false
+                                            }
+                                            if (played) isPlayingAudio = true
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("play_voice_note_button")
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPlayingAudio) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(if (isPlayingAudio) "إيقاف" else "استماع", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Notes Field
                 OutlinedTextField(
                     value = notes,
@@ -439,6 +612,7 @@ fun AddEditMedicationDialog(
                                         lowStockThreshold = lowVal,
                                         colorHex = selectedColor,
                                         notes = notes.trim(),
+                                        voiceNotePath = voiceNotePath,
                                         isActive = true
                                     )
                                     onSave(updatedMed)

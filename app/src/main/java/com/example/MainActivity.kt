@@ -60,8 +60,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MedReminderTheme {
-                MedReminderAppContent()
+            val context = LocalContext.current
+            val database = remember { AppDatabase.getDatabase(context) }
+            val repository = remember {
+                MedicationRepository(
+                    medicationDao = database.medicationDao(),
+                    intakeLogDao = database.intakeLogDao()
+                )
+            }
+            val viewModelFactory = remember { MedicationViewModelFactory(repository) }
+            val viewModel: MedicationViewModel = viewModel(factory = viewModelFactory)
+            val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+
+            MedReminderTheme(darkTheme = isDarkMode) {
+                MedReminderAppContent(viewModel = viewModel)
             }
         }
     }
@@ -75,18 +87,9 @@ enum class ScreenTab(val title: String, val icon: ImageVector, val tag: String) 
 }
 
 @Composable
-fun MedReminderAppContent() {
-    val context = LocalContext.current
-    val database = remember { AppDatabase.getDatabase(context) }
-    val repository = remember {
-        MedicationRepository(
-            medicationDao = database.medicationDao(),
-            intakeLogDao = database.intakeLogDao()
-        )
-    }
-    val viewModelFactory = remember { MedicationViewModelFactory(repository) }
-    val viewModel: MedicationViewModel = viewModel(factory = viewModelFactory)
-
+fun MedReminderAppContent(
+    viewModel: MedicationViewModel
+) {
     var currentTab by remember { mutableStateOf(ScreenTab.HOME) }
 
     val showAddDialog by viewModel.showAddEditDialog.collectAsStateWithLifecycle()

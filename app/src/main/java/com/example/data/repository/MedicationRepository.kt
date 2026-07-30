@@ -30,14 +30,16 @@ class MedicationRepository(
         intakeLogDao.updateLogStatus(log.id, "SKIPPED", null)
     }
 
-    suspend fun snoozeDose(log: IntakeLog, minutes: Int = 15) {
-        // Adjust scheduled time by 15 mins for UI view
+    suspend fun snoozeDose(log: IntakeLog, minutes: Int = 60) {
         val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
         try {
             val dateObj = sdf.parse(log.scheduledTime)
             if (dateObj != null) {
                 val newTime = sdf.format(Date(dateObj.time + minutes * 60 * 1000))
-                val updatedLog = log.copy(scheduledTime = newTime)
+                val updatedLog = log.copy(
+                    scheduledTime = newTime,
+                    status = "SNOOZED"
+                )
                 intakeLogDao.updateLog(updatedLog)
             }
         } catch (e: Exception) {
@@ -93,6 +95,87 @@ class MedicationRepository(
         }
         if (newLogs.isNotEmpty()) {
             intakeLogDao.insertLogs(newLogs)
+        }
+    }
+
+    suspend fun exportBackupJson(): String {
+        val activeMeds = medicationDao.getAllActiveMedications().first()
+        val allLogs = intakeLogDao.getAllLogs().first()
+
+        val rootJson = org.json.JSONObject()
+        rootJson.put("version", 1)
+        rootJson.put("exportedAt", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+
+        val medsArray = org.json.JSONArray()
+        for (med in activeMeds) {
+            val medObj = org.json.JSONObject()
+            medObj.put("id", med.id)
+            medObj.put("name", med.name)
+            medObj.put("dosage", med.dosage)
+            medObj.put("form", med.form)
+            medObj.put("foodInstruction", med.foodInstruction)
+            medObj.put("timesOfDay", med.timesOfDay)
+            medObj.put("stockCount", med.stockCount)
+            medObj.put("lowStockThreshold", med.lowStockThreshold)
+            medObj.put("colorHex", med.colorHex)
+            medObj.put("notes", med.notes)
+            medObj.put("voiceNotePath", med.voiceNotePath ?: org.json.JSONObject.NULL)
+            medsArray.put(medObj)
+        }
+        rootJson.put("medications", medsArray)
+
+        val logsArray = org.json.JSONArray()
+        for (log in allLogs) {
+            val logObj = org.json.JSONObject()
+            logObj.put("id", log.id)
+            logObj.put("medicationId", log.medicationId)
+            logObj.put("medicationName", log.medicationName)
+            logObj.put("dosage", log.dosage)
+            logObj.put("scheduledDate", log.scheduledDate)
+            logObj.put("scheduledTime", log.scheduledTime)
+            logObj.put("status", log.status)
+            logObj.put("takenTimestamp", log.takenTimestamp ?: org.json.JSONObject.NULL)
+            logObj.put("voicePromptText", log.voicePromptText)
+            logsArray.put(logObj)
+        }
+        rootJson.put("intakeLogs", logsArray)
+
+        return rootJson.toString(2)
+    }
+
+    suspend fun importBackupJson(jsonString: String): Result<Int> {
+        return try {
+            val rootJson = org.json.JSONObject(jsonString)
+            val medsArray = rootJson.optJSONArray("medications") ?: org.json.JSONArray()
+            val logsArray = rootJson.optJSONArray("intakeLogs") ?: org.json.JSONArray()
+
+            var importedCount = 0
+            for (i in 0 until medsArray.length()) {
+                val medObj = medsArray.getJSONObject(i)
+                val med = Medication(
+                    id = 0, // auto generate new id to prevent primary key conflicts
+                    name = medObj.getString("name"),
+                    dosage = medObj.optString("dosage", "قرص"),
+                    form = medObj.optString("form", "PILL"),
+                    foodInstruction = medObj.optString("foodInstruction", "NO_RESTRICTION"),
+                    timesOfDay = medObj.optString("timesOfDay", "08:00"),
+                    stockCount = medObj.optInt("stockCount", 20),
+                    lowStockThreshold = medObj.optInt("lowStockThreshold", 5),
+                    colorHex = medObj.optString("colorHex", "#00897B"),
+                    notes = medObj.optString("notes", ""),
+                    voiceNotePath = if (medObj.isNull("voiceNotePath")) null else medObj.optString("voiceNotePath", null)
+                )
+                medicationDao.insertMedication(med)
+                importedCount++
+            }
+
+            // Regenerate schedule logs for today
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            generateLogsForDate(today)
+
+            Result.success(importedCount)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

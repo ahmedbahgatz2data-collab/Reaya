@@ -57,7 +57,13 @@ class MedicationViewModel(
     private val _voiceStyle = MutableStateFlow("FRIENDLY")
     val voiceStyle: StateFlow<String> = _voiceStyle.asStateFlow()
 
-    private val _ttsRate = MutableStateFlow(1.0f)
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    private val _alertMode = MutableStateFlow("BOTH") // "BOTH", "VOICE_ONLY", "RINGTONE_ONLY", "VIBRATE"
+    val alertMode: StateFlow<String> = _alertMode.asStateFlow()
+
+    private val _ttsRate = MutableStateFlow(0.88f) // Default natural speech rate for Arabic
     val ttsRate: StateFlow<Float> = _ttsRate.asStateFlow()
 
     private val _ttsPitch = MutableStateFlow(1.0f)
@@ -116,21 +122,39 @@ class MedicationViewModel(
         }
     }
 
-    fun snoozeDose(log: IntakeLog, minutes: Int = 15) {
+    fun snoozeDose(log: IntakeLog, minutes: Int = 60) {
         viewModelScope.launch {
             repository.snoozeDose(log, minutes)
         }
     }
 
-    fun playVoiceReminder(context: Context, text: String) {
+    fun toggleDarkMode(enabled: Boolean) {
+        _isDarkMode.value = enabled
+    }
+
+    fun playVoiceReminder(context: Context, text: String, voiceNotePath: String? = null) {
         val helper = getTts(context)
         helper.speechRate = _ttsRate.value
         helper.pitch = _ttsPitch.value
-        helper.speak(text, _voiceStyle.value)
+        helper.playCustomVoiceNoteOrTTS(
+            voiceNotePath = voiceNotePath,
+            text = text,
+            alertMode = _alertMode.value,
+            voiceStyle = _voiceStyle.value
+        )
+    }
+
+    fun playTestRingtone(context: Context) {
+        val helper = getTts(context)
+        helper.playRingtoneSound()
     }
 
     fun stopVoiceReminder() {
         ttsHelper?.stop()
+    }
+
+    fun setAlertMode(mode: String) {
+        _alertMode.value = mode
     }
 
     fun updateVoiceSettings(style: String, rate: Float, pitch: Float) {
@@ -204,6 +228,44 @@ class MedicationViewModel(
             val tips = geminiAdvisor.getMedicationTips(medicationName)
             _medicationTips.value = tips
             _isLoadingTips.value = false
+        }
+    }
+
+    private val _showBackupDialog = MutableStateFlow(false)
+    val showBackupDialog: StateFlow<Boolean> = _showBackupDialog.asStateFlow()
+
+    private val _backupStatusMessage = MutableStateFlow<String?>(null)
+    val backupStatusMessage: StateFlow<String?> = _backupStatusMessage.asStateFlow()
+
+    fun openBackupDialog() {
+        _backupStatusMessage.value = null
+        _showBackupDialog.value = true
+    }
+
+    fun closeBackupDialog() {
+        _showBackupDialog.value = false
+        _backupStatusMessage.value = null
+    }
+
+    fun exportBackupData(onExportReady: (String) -> Unit) {
+        viewModelScope.launch {
+            val json = repository.exportBackupJson()
+            onExportReady(json)
+            _backupStatusMessage.value = "تم تصدير النسخة الاحتياطية بنجاح!"
+        }
+    }
+
+    fun importBackupData(jsonString: String, onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.importBackupJson(jsonString)
+            if (result.isSuccess) {
+                val count = result.getOrDefault(0)
+                _backupStatusMessage.value = "تمت استعادة $count أدوية بنجاح!"
+                onComplete(true)
+            } else {
+                _backupStatusMessage.value = "عذراً، فشلت استعادة البيانات. يرجى التأكد من تنسيق الملف."
+                onComplete(false)
+            }
         }
     }
 
