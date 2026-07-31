@@ -99,7 +99,7 @@ fun HomeScreen(
     val takenDoses = todayLogs.count { it.status == "TAKEN" }
     val adherencePercent = if (totalDoses > 0) (takenDoses.toFloat() / totalDoses * 100).toInt() else 0
 
-    val nextDose = todayLogs.firstOrNull { it.status == "PENDING" || it.status == "SNOOZED" } ?: todayLogs.firstOrNull()
+    val nextDose = todayLogs.firstOrNull { it.status == "PENDING" || it.status == "SNOOZED" }
     val nextMed = if (nextDose != null) allMeds.firstOrNull { it.id == nextDose.medicationId } else null
 
     val lowStockMeds = remember(allMeds) {

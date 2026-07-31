@@ -56,6 +56,21 @@ class MedicationRepository(
 
     suspend fun updateMedication(medication: Medication) {
         medicationDao.updateMedication(medication)
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        generateLogsForDate(today)
+        // Also update pending logs for today with new name/dosage/voice prompt
+        val existingLogs = intakeLogDao.getLogsForDate(today).first()
+        for (log in existingLogs) {
+            if (log.medicationId == medication.id && log.status == "PENDING") {
+                val voicePrompt = generateArabicVoicePrompt(medication, log.scheduledTime)
+                val updatedLog = log.copy(
+                    medicationName = medication.name,
+                    dosage = medication.dosage,
+                    voicePromptText = voicePrompt
+                )
+                intakeLogDao.updateLog(updatedLog)
+            }
+        }
     }
 
     suspend fun deleteMedication(medication: Medication) {
