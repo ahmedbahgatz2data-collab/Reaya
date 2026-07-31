@@ -406,7 +406,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Button(
-                                onClick = { viewModel.markDoseTaken(nextDose) },
+                                onClick = { viewModel.markDoseTaken(nextDose, context) },
                                 colors = ButtonDefaults.buttonColors(containerColor = BentoOnPrimaryContainer),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
@@ -418,7 +418,7 @@ fun HomeScreen(
                                 Text("تم التناول", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
                             }
                             OutlinedButton(
-                                onClick = { viewModel.snoozeDose(nextDose, 60) },
+                                onClick = { viewModel.snoozeDose(nextDose, 60, context) },
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -613,8 +613,8 @@ fun HomeScreen(
                             BentoScheduleLogRow(
                                 log = log,
                                 medication = med,
-                                onMarkTaken = { viewModel.markDoseTaken(log) },
-                                onSnooze = { viewModel.snoozeDose(log, 60) },
+                                onMarkTaken = { viewModel.markDoseTaken(log, context) },
+                                onSnooze = { viewModel.snoozeDose(log, 60, context) },
                                 onPlayVoice = { viewModel.playVoiceReminder(context, log.voicePromptText, med?.voiceNotePath) },
                                 onGenerateAiScript = {
                                     if (med != null) {

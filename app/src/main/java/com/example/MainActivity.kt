@@ -100,6 +100,7 @@ enum class ScreenTab(val title: String, val icon: ImageVector, val tag: String) 
 fun MedReminderAppContent(
     viewModel: MedicationViewModel
 ) {
+    val context = LocalContext.current
     var currentTab by remember { mutableStateOf(ScreenTab.HOME) }
 
     val showAddDialog by viewModel.showAddEditDialog.collectAsStateWithLifecycle()
@@ -135,8 +136,8 @@ fun MedReminderAppContent(
             AddEditMedicationDialog(
                 medication = editingMedication,
                 onDismiss = { viewModel.closeAddMedicationDialog() },
-                onSave = { med -> viewModel.saveMedication(med) },
-                onDelete = { med -> viewModel.deleteMedication(med) }
+                onSave = { med -> viewModel.saveMedication(med, context) },
+                onDelete = { med -> viewModel.deleteMedication(med, context) }
             )
         }
     }

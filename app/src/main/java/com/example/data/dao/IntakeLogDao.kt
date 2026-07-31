@@ -34,6 +34,9 @@ interface IntakeLogDao {
     @Query("DELETE FROM intake_logs WHERE medicationId = :medicationId")
     suspend fun deleteLogsForMedication(medicationId: Long)
 
+    @Query("DELETE FROM intake_logs WHERE medicationId = :medicationId AND status IN ('PENDING', 'SNOOZED') AND scheduledDate = :date")
+    suspend fun deletePendingLogsForMedicationOnDate(medicationId: Long, date: String)
+
     @Query("DELETE FROM intake_logs")
     suspend fun deleteAllLogs()
 }

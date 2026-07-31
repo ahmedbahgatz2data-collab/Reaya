@@ -132,3 +132,20 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+
+tasks.register("copyDebugApk") {
+    dependsOn("assembleDebug")
+    val apkOutputDir = layout.buildDirectory.dir("outputs/apk/debug")
+    val rootDirFile = rootDir
+    doLast {
+        val src = apkOutputDir.get().file("app-debug.apk").asFile
+        if (src.exists()) {
+            val dest1 = File(rootDirFile, "build-outputs/app-debug.apk")
+            val dest2 = File(rootDirFile, ".build-outputs/app-debug.apk")
+            dest1.parentFile?.mkdirs()
+            dest2.parentFile?.mkdirs()
+            src.copyTo(dest1, overwrite = true)
+            src.copyTo(dest2, overwrite = true)
+        }
+    }
+}

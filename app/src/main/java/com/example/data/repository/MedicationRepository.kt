@@ -57,11 +57,15 @@ class MedicationRepository(
     suspend fun updateMedication(medication: Medication) {
         medicationDao.updateMedication(medication)
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        
+        // Remove pending logs for today so we can regenerate them with new times, keeping TAKEN/SNOOZED/SKIPPED logs intact in history
+        intakeLogDao.deletePendingLogsForMedicationOnDate(medication.id, today)
         generateLogsForDate(today)
-        // Also update pending logs for today with new name/dosage/voice prompt
+
+        // Also update name and dosage for any existing logs (including TAKEN) if medication details changed
         val existingLogs = intakeLogDao.getLogsForDate(today).first()
         for (log in existingLogs) {
-            if (log.medicationId == medication.id && log.status == "PENDING") {
+            if (log.medicationId == medication.id) {
                 val voicePrompt = generateArabicVoicePrompt(medication, log.scheduledTime)
                 val updatedLog = log.copy(
                     medicationName = medication.name,
@@ -178,7 +182,7 @@ class MedicationRepository(
                     lowStockThreshold = medObj.optInt("lowStockThreshold", 5),
                     colorHex = medObj.optString("colorHex", "#00897B"),
                     notes = medObj.optString("notes", ""),
-                    voiceNotePath = if (medObj.isNull("voiceNotePath")) null else medObj.optString("voiceNotePath", null)
+                    voiceNotePath = if (medObj.isNull("voiceNotePath")) null else medObj.optString("voiceNotePath", "")
                 )
                 medicationDao.insertMedication(med)
                 importedCount++

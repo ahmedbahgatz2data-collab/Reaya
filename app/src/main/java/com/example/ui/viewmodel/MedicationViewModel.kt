@@ -117,6 +117,7 @@ class MedicationViewModel(
     init {
         viewModelScope.launch {
             repository.prepopulateDefaultsIfEmpty()
+            repository.generateLogsForDate(_selectedDate.value)
         }
     }
 
