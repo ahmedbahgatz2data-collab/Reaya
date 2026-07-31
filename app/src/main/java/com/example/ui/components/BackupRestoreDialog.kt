@@ -297,7 +297,16 @@ fun BackupRestoreDialog(
                             onClick = {
                                 viewModel.exportBackupData { json ->
                                     exportedJsonText = json
-                                    localStatusMsg = "تم إنشاء النسخة الاحتياطية بنجاح!"
+                                    try {
+                                        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                                        if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                                        val file = java.io.File(downloadsDir, "MedicationBackup_${System.currentTimeMillis()}.json")
+                                        file.writeText(json)
+                                        localStatusMsg = "تم حفظ ملف النسخة الاحتياطية بنجاح على الهاتف في: ${file.absolutePath}"
+                                        Toast.makeText(context, "تم حفظ النسخة في التنزيلات 📥", Toast.LENGTH_LONG).show()
+                                    } catch (e: Exception) {
+                                        localStatusMsg = "تم إنشاء النسخة الاحتياطية بنجاح!"
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),

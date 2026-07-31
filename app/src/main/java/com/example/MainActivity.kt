@@ -5,10 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -148,14 +150,16 @@ fun BentoBottomNavigation(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp),
+            .border(width = 1.dp, color = BentoBorder, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        tonalElevation = 12.dp,
+        shadowElevation = 8.dp
     ) {
         NavigationBar(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = BentoPrimary,
-            modifier = Modifier.clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            windowInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
         ) {
             ScreenTab.entries.forEach { tab ->
                 val isSelected = currentTab == tab
@@ -174,8 +178,8 @@ fun BentoBottomNavigation(
                             text = tab.title,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 10.sp,
-                            color = if (isSelected) BentoPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            fontSize = 11.sp,
+                            color = if (isSelected) BentoPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     },
                     colors = NavigationBarItemDefaults.colors(

@@ -66,10 +66,10 @@ class MedicationViewModel(
     private val _voiceStyle = MutableStateFlow("FRIENDLY")
     val voiceStyle: StateFlow<String> = _voiceStyle.asStateFlow()
 
-    private val _userName = MutableStateFlow("أحمد")
+    private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
-    private val _userEmail = MutableStateFlow("ahmed@example.com")
+    private val _userEmail = MutableStateFlow("")
     val userEmail: StateFlow<String> = _userEmail.asStateFlow()
 
     private val _isBackgroundWorkEnabled = MutableStateFlow(true)
@@ -81,8 +81,14 @@ class MedicationViewModel(
     private val _isDarkMode = MutableStateFlow(false)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
-    private val _alertMode = MutableStateFlow("BOTH") // "BOTH", "VOICE_ONLY", "RINGTONE_ONLY", "VIBRATE"
+    private val _alertMode = MutableStateFlow("RINGTONE_ONLY") // Default: "RINGTONE_ONLY" (نغمة الرنين/المنبه فقط)
     val alertMode: StateFlow<String> = _alertMode.asStateFlow()
+
+    private val _customRingtoneUri = MutableStateFlow<String?>(null)
+    val customRingtoneUri: StateFlow<String?> = _customRingtoneUri.asStateFlow()
+
+    private val _customRingtoneTitle = MutableStateFlow("نغمة المنبه الافتراضية للجهاز")
+    val customRingtoneTitle: StateFlow<String> = _customRingtoneTitle.asStateFlow()
 
     private val _ttsRate = MutableStateFlow(0.88f) // Default natural speech rate for Arabic
     val ttsRate: StateFlow<Float> = _ttsRate.asStateFlow()
@@ -165,6 +171,21 @@ class MedicationViewModel(
         _isDarkMode.value = enabled
     }
 
+    fun setCustomRingtone(uri: String?, title: String) {
+        _customRingtoneUri.value = uri
+        _customRingtoneTitle.value = title.ifBlank { "نغمة مخصصة" }
+    }
+
+    fun clearAllData(context: Context) {
+        viewModelScope.launch {
+            repository.clearAllMedicationsAndLogs()
+            _userName.value = ""
+            _userEmail.value = ""
+            com.example.widget.NextDoseWidgetProvider.updateAllWidgets(context)
+            com.example.worker.MedicationWorkScheduler.scheduleAllReminders(context)
+        }
+    }
+
     fun playVoiceReminder(context: Context, text: String, voiceNotePath: String? = null) {
         val helper = getTts(context)
         helper.speechRate = _ttsRate.value
@@ -173,13 +194,14 @@ class MedicationViewModel(
             voiceNotePath = voiceNotePath,
             text = text,
             alertMode = _alertMode.value,
-            voiceStyle = _voiceStyle.value
+            voiceStyle = _voiceStyle.value,
+            customRingtoneUri = _customRingtoneUri.value
         )
     }
 
     fun playTestRingtone(context: Context) {
         val helper = getTts(context)
-        helper.playRingtoneSound()
+        helper.playRingtoneSound(_customRingtoneUri.value)
     }
 
     fun stopVoiceReminder() {

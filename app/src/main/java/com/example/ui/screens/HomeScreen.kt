@@ -401,24 +401,30 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Button(
                                 onClick = { viewModel.markDoseTaken(nextDose) },
                                 colors = ButtonDefaults.buttonColors(containerColor = BentoOnPrimaryContainer),
                                 shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.pulseEffect(enabled = true)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .pulseEffect(enabled = true)
                             ) {
-                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color.White)
+                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("تم التناول الآن", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("تم التناول", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
                             }
                             OutlinedButton(
                                 onClick = { viewModel.snoozeDose(nextDose, 60) },
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
                                 Icon(imageVector = Icons.Default.Snooze, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(2.dp))
-                                Text("تم التأجيل (ساعة)")
+                                Text("تأجيل ساعة", fontSize = 12.sp, maxLines = 1)
                             }
                         }
                     } else {

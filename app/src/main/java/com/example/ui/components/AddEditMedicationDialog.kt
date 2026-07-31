@@ -1,5 +1,8 @@
 package com.example.ui.components
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
@@ -99,6 +103,26 @@ fun AddEditMedicationDialog(
     var isPlayingAudio by remember { mutableStateOf(false) }
     val audioRecorder = remember { AudioRecorderHelper(context) }
 
+    val audioPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val outFile = java.io.File(context.filesDir, "med_uploaded_${System.currentTimeMillis()}.mp3")
+                inputStream?.use { input ->
+                    outFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                voiceNotePath = outFile.absolutePath
+                Toast.makeText(context, "تم رفع ملف الصوت بنجاح 🎵", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "فشل رفع الملف الصوتي", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     val timesList = remember {
         val initialTimes = medication?.timesOfDay?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
         mutableStateListOf<String>().apply {
@@ -106,6 +130,19 @@ fun AddEditMedicationDialog(
                 addAll(initialTimes)
             } else {
                 addAll(listOf("08:00", "20:00"))
+            }
+        }
+    }
+
+    val allDays = listOf("السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة")
+    val selectedDaysList = remember {
+        val initialNotes = medication?.notes ?: ""
+        mutableStateListOf<String>().apply {
+            if (initialNotes.contains("أيام:")) {
+                val daysStr = initialNotes.substringAfter("أيام:").substringBefore(";")
+                addAll(daysStr.split(",").map { it.trim() }.filter { allDays.contains(it) })
+            } else {
+                addAll(allDays)
             }
         }
     }
@@ -431,6 +468,47 @@ fun AddEditMedicationDialog(
                     Text("إضافة موعد جرعة جديد")
                 }
 
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "تحديد أيام التناول في الأسبوع:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    allDays.forEach { day ->
+                        val isSelected = selectedDaysList.contains(day)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) BentoPrimary else BentoPrimaryContainer.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    if (isSelected) {
+                                        if (selectedDaysList.size > 1) selectedDaysList.remove(day)
+                                    } else {
+                                        selectedDaysList.add(day)
+                                    }
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 1.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = day,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Color Selection Palette
@@ -621,9 +699,25 @@ fun AddEditMedicationDialog(
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(if (isPlayingAudio) "إيقاف" else "استماع", fontSize = 12.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(if (isPlayingAudio) "إيقاف" else "استماع", fontSize = 11.sp)
                                 }
+                            }
+
+                            OutlinedButton(
+                                onClick = { audioPickerLauncher.launch("audio/*") },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("upload_audio_file_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FileUpload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("رفع ملف", fontSize = 11.sp)
                             }
                         }
                     }

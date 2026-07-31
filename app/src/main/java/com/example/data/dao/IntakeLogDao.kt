@@ -33,4 +33,7 @@ interface IntakeLogDao {
 
     @Query("DELETE FROM intake_logs WHERE medicationId = :medicationId")
     suspend fun deleteLogsForMedication(medicationId: Long)
+
+    @Query("DELETE FROM intake_logs")
+    suspend fun deleteAllLogs()
 }

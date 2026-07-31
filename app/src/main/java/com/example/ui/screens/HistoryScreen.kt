@@ -258,7 +258,10 @@ fun HistoryLogBentoItem(log: IntakeLog) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
                 Surface(
                     shape = CircleShape,
                     color = statusColor.copy(alpha = 0.15f),
@@ -274,17 +277,21 @@ fun HistoryLogBentoItem(log: IntakeLog) {
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Column {
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         text = log.medicationName,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
                     )
                     Text(
-                        text = "التاريخ: ${log.scheduledDate}  •  الموعد: ${log.scheduledTime}",
+                        text = "التاريخ: ${log.scheduledDate} • الموعد: ${log.scheduledTime}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1
                     )
                 }
             }

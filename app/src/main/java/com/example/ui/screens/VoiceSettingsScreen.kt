@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -98,8 +100,31 @@ fun VoiceSettingsScreen(
     val syncUserId by viewModel.syncUserIdState.collectAsStateWithLifecycle()
     val isCloudSyncing by viewModel.isCloudSyncing.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupStatusMessage.collectAsStateWithLifecycle()
+    val customRingtoneTitle by viewModel.customRingtoneTitle.collectAsStateWithLifecycle()
     val allMeds by viewModel.allMedications.collectAsStateWithLifecycle()
     val todayLogs by viewModel.todayLogs.collectAsStateWithLifecycle()
+
+    val ringtoneLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri: android.net.Uri? = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI, android.net.Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            }
+            if (uri != null) {
+                val ringtone = android.media.RingtoneManager.getRingtone(context, uri)
+                val title = ringtone?.getTitle(context) ?: "نغمة مخصصة"
+                viewModel.setCustomRingtone(uri.toString(), title)
+                Toast.makeText(context, "تم تعيين النغمة: $title", Toast.LENGTH_SHORT).show()
+            } else {
+                viewModel.setCustomRingtone(null, "نغمة المنبه الافتراضية للجهاز")
+                Toast.makeText(context, "تم العودة للنغمة الافتراضية", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     var isEditingProfile by remember { mutableStateOf(false) }
     var editNameInput by remember(userName) { mutableStateOf(userName) }
@@ -735,6 +760,77 @@ fun VoiceSettingsScreen(
             }
         }
 
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Custom Ringtone Selector Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BentoBorder, RoundedCornerShape(18.dp))
+                .clickable {
+                    val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALL)
+                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "اختر نغمة التنبيه للدواء")
+                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                    }
+                    ringtoneLauncher.launch(intent)
+                },
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = BentoPrimaryContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = BentoPrimary,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "نغمة التنبيه المخصصة للجهاز",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = customRingtoneTitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = BentoPrimary
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                            putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALL)
+                            putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "اختر نغمة التنبيه للدواء")
+                            putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                            putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                        }
+                        ringtoneLauncher.launch(intent)
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("تغيير النغمة")
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
 
         // SECTION 4: VOICE PERSONALITY & TONE
@@ -854,53 +950,6 @@ fun VoiceSettingsScreen(
                         activeTrackColor = BentoPrimary
                     )
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // SECTION 6: APP & APK INFO BANNER
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, BentoBorder, RoundedCornerShape(20.dp)),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = BentoPrimaryContainer.copy(alpha = 0.2f))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = BentoPrimary,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Android,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "معلومات التطبيق وحزمة APK 📱",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "الإصدار v1.2.0 • الحجم الكامل للـ APK السليم هو ~28 ميجابايت (يحتوي على المحرك الصوتي وقواعد البيانات والتنبيهات).",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
             }
         }
     }

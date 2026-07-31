@@ -180,48 +180,15 @@ class MedicationRepository(
     }
 
     suspend fun prepopulateDefaultsIfEmpty() {
-        val existing = medicationDao.getAllActiveMedications().first()
-        if (existing.isEmpty()) {
-            val sample1 = Medication(
-                name = "بندول فورت 500 ملغ",
-                dosage = "قرص واحد",
-                form = "PILL",
-                foodInstruction = "بعد الأكل",
-                timesOfDay = "08:00,14:00,20:00",
-                stockCount = 24,
-                lowStockThreshold = 6,
-                colorHex = "#00897B",
-                notes = "لتسكين الآلام وتخفيض الحرارة عند اللزوم"
-            )
-            val sample2 = Medication(
-                name = "أنسولين لانتوس",
-                dosage = "10 وحدات",
-                form = "INJECTION",
-                foodInstruction = "قبل الأكل",
-                timesOfDay = "07:30,21:00",
-                stockCount = 15,
-                lowStockThreshold = 4,
-                colorHex = "#1E88E5",
-                notes = "حقنة تحت الجلد قبل وجبة الفطور والعشاء"
-            )
-            val sample3 = Medication(
-                name = "شراب أوميبرازول للمعدة",
-                dosage = "10 مل",
-                form = "SYRUP",
-                foodInstruction = "على الريق",
-                timesOfDay = "07:00",
-                stockCount = 8,
-                lowStockThreshold = 10,
-                colorHex = "#FF7043",
-                notes = "تؤخذ قبل الفطور بـ 30 دقيقة لحماية المعدة"
-            )
-            medicationDao.insertMedication(sample1)
-            medicationDao.insertMedication(sample2)
-            medicationDao.insertMedication(sample3)
+        // No dummy sample medications pre-populated; user adds their own medications
+    }
 
-            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            generateLogsForDate(today)
+    suspend fun clearAllMedicationsAndLogs() {
+        val activeMeds = medicationDao.getAllActiveMedications().first()
+        for (med in activeMeds) {
+            medicationDao.deleteMedication(med)
         }
+        intakeLogDao.deleteAllLogs()
     }
 
     private fun generateArabicVoicePrompt(med: Medication, time: String): String {

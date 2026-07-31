@@ -139,8 +139,9 @@ class TextToSpeechHelper(private val context: Context) : TextToSpeech.OnInitList
     fun playCustomVoiceNoteOrTTS(
         voiceNotePath: String?,
         text: String,
-        alertMode: String = "BOTH",
-        voiceStyle: String = "FRIENDLY"
+        alertMode: String = "RINGTONE_ONLY",
+        voiceStyle: String = "FRIENDLY",
+        customRingtoneUri: String? = null
     ) {
         stop()
 
@@ -149,7 +150,7 @@ class TextToSpeechHelper(private val context: Context) : TextToSpeech.OnInitList
 
         when (alertMode) {
             "RINGTONE_ONLY" -> {
-                playRingtoneSound()
+                playRingtoneSound(customRingtoneUri)
             }
             "VIBRATE" -> {
                 triggerVibration()
@@ -162,7 +163,7 @@ class TextToSpeechHelper(private val context: Context) : TextToSpeech.OnInitList
                 }
             }
             else -> { // "BOTH"
-                playRingtoneSound()
+                playRingtoneSound(customRingtoneUri)
                 Handler(Looper.getMainLooper()).postDelayed({
                     stopRingtone()
                     if (hasCustomVoiceNote) {
@@ -247,12 +248,17 @@ class TextToSpeechHelper(private val context: Context) : TextToSpeech.OnInitList
         tts?.speak(fullText, TextToSpeech.QUEUE_FLUSH, null, "MedReminderArabicTTS")
     }
 
-    fun playRingtoneSound() {
+    fun playRingtoneSound(customUriString: String? = null) {
         try {
             stopRingtone()
-            val notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            currentRingtone = RingtoneManager.getRingtone(context.applicationContext, notificationUri)
+            val uri = if (!customUriString.isNullOrBlank()) {
+                android.net.Uri.parse(customUriString)
+            } else {
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            }
+            currentRingtone = RingtoneManager.getRingtone(context.applicationContext, uri)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 currentRingtone?.audioAttributes = AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)

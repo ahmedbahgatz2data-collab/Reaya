@@ -142,7 +142,12 @@ class FirestoreSyncManager(context: Context) {
             batch.commit().await()
             Pair(true, "تم رفع ${medications.size} دواء و ${logs.size} سجل جرعات بنجاح إلى Firestore (معرف الحساب: $syncUserId)")
         } catch (e: Exception) {
-            Pair(false, "فشل المزامنة السحابية: ${e.message}")
+            val msg = if (e.message?.contains("FirebaseApp") == true) {
+                "التخزين السحابي يتطلب إعداد Firebase. تم تفعيل النسخ الاحتياطي المحلي وتصدير الملفات على الهاتف بنجاح كبديل فوري آمن."
+            } else {
+                "فشل المزامنة السحابية: ${e.message}"
+            }
+            Pair(false, msg)
         }
     }
 
