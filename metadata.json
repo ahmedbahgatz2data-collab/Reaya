@@ -1,5 +1,5 @@
 {
-  "name": "تذكير الدواء",
+  "name": "REAYA",
   "description": "تطبيق التذكير بالدواء للمرضى مع تنبيهات صوتية ذكية باللغة العربية وجدول زمني دقيق للمواعيد وإدارة المخزون",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
